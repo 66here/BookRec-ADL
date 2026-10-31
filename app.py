@@ -1,17 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Aksara Match — Smart Book Recommendations (tema "Tinta & Kertas")
+Bookscape — Explore. Discover. Read.
 Hybrid recommender: Collaborative Filtering (SVD) + Content-Based (TF-IDF)
 
 Jalankan:  streamlit run app.py
 """
 import html
+import os
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 import recsys
+
+# Logo: pakai file lokal logo.png kalau ada, kalau tidak ambil dari repo GitHub
+LOGO_LOCAL = "logo.png"
+LOGO_URL = "https://raw.githubusercontent.com/66here/BookRec-ADL/main/logo.png"
+LOGO = LOGO_LOCAL if os.path.exists(LOGO_LOCAL) else LOGO_URL
 
 # ─────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -26,7 +32,7 @@ except Exception:
     pass
 
 st.set_page_config(
-    page_title="Aksara Match — Book Recommendations",
+    page_title="Bookscape — Explore. Discover. Read.",
     page_icon="📖",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -112,6 +118,7 @@ button[aria-label="Close sidebar"] {
     background: var(--accent);
 }
 [data-testid="stSidebar"] .stRadio label:has(input:checked) * { color: #FFFFFF !important; }
+[data-testid="stSidebar"] [data-testid="stImage"] img { border-radius: 12px; }
 
 /* ── Headings ── */
 h1, h2, h3 { font-family: var(--font-head); color: var(--text); font-weight: 800; letter-spacing: -0.01em; }
@@ -278,6 +285,12 @@ st.markdown("""
          color:var(--accent2);padding:2px 11px;border-radius:999px;font-size:0.72rem;font-weight:600;margin:0 6px 6px 0;}
 .am-reason{color:var(--text-dim);font-size:0.78rem;font-style:italic;margin-top:0.5rem;line-height:1.4;}
 .am-section{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin:1rem 0 0.4rem;font-weight:600;}
+.am-step{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.3rem;margin-bottom:.8rem;
+         display:flex;gap:1rem;align-items:flex-start;}
+.am-step-num{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;
+             font-family:var(--font-head);font-weight:800;display:flex;align-items:center;justify-content:center;}
+.am-step-ttl{font-family:var(--font-head);font-weight:700;font-size:1.02rem;color:var(--text);margin-bottom:.2rem;}
+.am-step-txt{color:var(--text-dim);font-size:.88rem;line-height:1.6;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -474,7 +487,7 @@ def reset_settings():
 
 def sidebar_settings():
     sidebar_label("Recommendation Settings")
-    st.sidebar.button("🔄 Reset settings", on_click=reset_settings, use_container_width=True)
+    st.sidebar.button("Reset settings", on_click=reset_settings, use_container_width=True)
     k = st.sidebar.slider("Books to recommend", 5, 20, 10, key="k")
     max_auth = st.sidebar.slider("Max books per author", 1, 5, 2, key="max_auth")
     yv = items["year"].dropna()
@@ -495,31 +508,34 @@ def sidebar_settings():
 # ─────────────────────────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────────────────────────
+MENU = ["Overview", "Insights", "Book Matcher", "Catalog"]
+
 with st.sidebar:
+    lc1, lc2, lc3 = st.columns([1, 2, 1])
+    with lc2:
+        try:
+            st.image(LOGO, use_container_width=True)
+        except Exception:
+            pass
     st.markdown("""
-    <div style="padding:1.5rem 0 1rem;text-align:center;">
-        <div style="font-size:2.4rem;margin-bottom:0.3rem;">📖</div>
+    <div style="padding:.2rem 0 1rem;text-align:center;">
         <div style="font-family:var(--font-head);font-size:1.5rem;font-weight:900;
                     background:linear-gradient(135deg,var(--accent),var(--accent2));
                     -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-            Aksara Match
+            Bookscape
         </div>
         <div style="font-size:0.72rem;color:var(--text-dim);letter-spacing:0.12em;text-transform:uppercase;margin-top:2px;">
-            Smart Book Recommendations
+            Explore. Discover. Read.
         </div>
     </div>
     <hr style="border-color:rgba(59,75,184,0.15);margin:0 0 1.2rem;">
     """, unsafe_allow_html=True)
 
-    page = st.radio(
-        "Menu",
-        ["🏠  Home", "📊  Analytics", "🎯  Recommend", "📚  Browse Library"],
-        label_visibility="collapsed",
-    )
+    page = st.radio("Menu", MENU, label_visibility="collapsed")
 
     if st.session_state.get("detail_book"):
         st.markdown("<hr style='border-color:rgba(59,75,184,0.1);margin:1rem 0;'>", unsafe_allow_html=True)
-        if st.button("← Back", use_container_width=True):
+        if st.button("Back", use_container_width=True):
             st.session_state["detail_book"] = None
             st.rerun()
 
@@ -603,9 +619,9 @@ if st.session_state.get("detail_book"):
 
 
 # ─────────────────────────────────────────────────────────────
-# PAGE: HOME
+# PAGE: OVERVIEW (HOME)
 # ─────────────────────────────────────────────────────────────
-if page == "🏠  Home":
+if page == "Overview":
     st.markdown("""
     <div style="position:relative;padding:4rem 2rem 3.5rem;margin:-2rem -2.5rem 2rem;
                 background:linear-gradient(135deg,#FFF9EC 0%,#F7ECD8 55%,#F2E3C8 100%);border-radius:0 0 32px 32px;
@@ -616,15 +632,15 @@ if page == "🏠  Home":
         <div style="position:absolute;bottom:-80px;left:10%;width:500px;height:200px;
                     background:radial-gradient(ellipse,rgba(59,75,184,0.12) 0%,transparent 70%);
                     pointer-events:none;"></div>
-        <div style="position:relative;max-width:800px;"><span class="am-chip" style="margin-bottom:1rem;">📖 Hybrid book recommender</span>
-            <h1 style="font-family:var(--font-head);font-size:clamp(2.2rem,4vw,3.6rem);
-                       font-weight:900;line-height:1.1;margin:0 0 1rem;
+        <div style="position:relative;max-width:800px;"><span class="am-chip" style="margin-bottom:1rem;">Explore. Discover. Read.</span>
+            <h1 style="font-family:var(--font-head);font-size:clamp(2.2rem,4vw,3.4rem);
+                       font-weight:900;line-height:1.15;margin:0 0 1rem;
                        background:linear-gradient(135deg,var(--text),var(--accent) 60%,var(--accent2));
                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-                Discover Your Next<br>Favorite Book
+                “A landscape of books<br>waiting to be explored.”
             </h1>
             <p style="color:var(--text-dim);font-size:1.05rem;max-width:540px;line-height:1.7;margin:0;">
-                Aksara Match blends collaborative filtering with content-based intelligence
+                Bookscape blends collaborative filtering with content-based intelligence
                 to surface books you'll love — before you even know to look for them.
             </p>
         </div>
@@ -636,23 +652,6 @@ if page == "🏠  Home":
     c2.metric("👥 Readers", f"{eda['model_users']:,}")
     c3.metric("🔗 Interactions", f"{eda['model_inter']:,}")
     c4.metric("⭐ Avg Rating", f"{AVG_ALL:.2f} / 10")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("""<h2 style="font-family:var(--font-head);font-size:1.6rem;margin-bottom:1.5rem;">
-        How It Works</h2>""", unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-    for col, icon, ttl, desc in [
-        (col1, "🔍", "Pick a Book", "Search any title or author. Content-based TF-IDF understands titles, authors and publishers."),
-        (col2, "🤝", "Find Your Tribe", "A latent-factor model (SVD) finds readers with similar taste who read the same books."),
-        (col3, "✨", "Get Matched", "Both signals are blended into one hybrid score, so you get books that fit — not just the obvious picks."),
-    ]:
-        col.markdown(H(f"""
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;height:100%;">
-            <div style="font-size:2rem;margin-bottom:.8rem;">{icon}</div>
-            <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">{ttl}</div>
-            <div style="color:var(--text-dim);font-size:.88rem;line-height:1.6;">{desc}</div>
-        </div>"""), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""<h2 style="font-family:var(--font-head);font-size:1.6rem;margin-bottom:1.2rem;">
@@ -669,10 +668,10 @@ if page == "🏠  Home":
 
 
 # ─────────────────────────────────────────────────────────────
-# PAGE: ANALYTICS
+# PAGE: INSIGHTS (ANALYTICS)
 # ─────────────────────────────────────────────────────────────
-elif page == "📊  Analytics":
-    page_title("Dataset Analytics", "Deep-dive into the reading landscape behind the recommendations.")
+elif page == "Insights":
+    page_title("Dataset Insights", "Explore the reading landscape and see how the recommendations are built and evaluated.")
 
     # ── chart HTML/CSS murni (tanpa library tambahan) ──
     def chart_card(title, inner):
@@ -718,17 +717,23 @@ elif page == "📊  Analytics":
             inner += f'<div style="color:var(--text-faint);font-size:.72rem;margin-top:.6rem;">{esc(note)}</div>'
         chart_card(title, inner)
 
-    t1, t2, t3, t4 = st.tabs(["⭐ Rating Distribution", "🌍 Readers & Authors",
-                              "📅 Publication Years", "🧪 Model Evaluation"])
+    def step_block(num, ttl, txt):
+        st.markdown(H(f"""
+        <div class="am-step">
+            <div class="am-step-num">{num}</div>
+            <div><div class="am-step-ttl">{esc(ttl)}</div><div class="am-step-txt">{txt}</div></div>
+        </div>"""), unsafe_allow_html=True)
 
-    with t1:
+    t_explore, t_eval = st.tabs(["Exploration", "Model Evaluation"])
+
+    # ---------- Exploration ----------
+    with t_explore:
         rd = pd.Series(eda["rating_dist"]).sort_index()
         vbars([str(int(i)) for i in rd.index], rd.values, "Rating Distribution (0 = read, not rated)",
               highlight={"0"}, height=240,
               note=f"{eda['pct_implicit']*100:.0f}% of all interactions are implicit (rating 0). "
                    "They are kept as positive signals in the model.")
 
-    with t2:
         a_col, b_col = st.columns(2)
         with a_col:
             tc = pd.Series(eda["top_countries"]).sort_values(ascending=False)
@@ -736,17 +741,44 @@ elif page == "📊  Analytics":
         with b_col:
             ta = pd.Series(eda["top_authors"]).sort_values(ascending=False)
             hbars(ta, "Most Read Authors", color=ACCENT2, label_w=150)
+
         ah = pd.Series(eda["age_hist"]).sort_index()
         ah = ah[(ah.index >= 5) & (ah.index <= 90)]
         vbars([str(int(i)) for i in ah.index], ah.values, "Reader Age Distribution (where available)",
               highlight={str(int(ah.idxmax()))}, height=170)
 
-    with t3:
         yh = pd.Series(eda["year_hist"]).sort_index()
         yh = yh[yh.index >= 1950]
         vbars([str(int(i)) for i in yh.index], yh.values, "Books by Publication Year", height=240)
 
-    with t4:
+    # ---------- Model Evaluation ----------
+    with t_eval:
+        st.markdown('<div class="am-section">How the model is built</div>', unsafe_allow_html=True)
+        step_block(1, "Data preparation",
+                   "Reader–book interactions are cleaned and filtered so that every reader and book in the model "
+                   "has enough history to learn from. Explicit ratings (1–10) and implicit reads (rating 0) are both "
+                   "kept: a book that was read, even without a rating, still counts as a positive signal.")
+        step_block(2, "Collaborative filtering (SVD)",
+                   "The reader × book interaction matrix is decomposed with truncated SVD into a small number of latent "
+                   "factors. Readers with similar taste end up close together in this latent space, so books read by "
+                   "&ldquo;neighbours&rdquo; can be scored for a reader who has not read them yet.")
+        step_block(3, "Content-based filtering (TF-IDF)",
+                   "Title, author and publisher text are turned into TF-IDF vectors. Cosine similarity between the books "
+                   "a reader likes and every other book gives a content score, which helps for books with few readers "
+                   "(the cold-start problem).")
+        step_block(4, "Hybrid scoring",
+                   f"The two scores are combined as a weighted sum: collaborative {art['best_w'][0]} + content "
+                   f"{art['best_w'][1]}. These weights were chosen from the evaluation below and can be changed "
+                   "manually in the Book Matcher settings.")
+        step_block(5, "Re-ranking and filters",
+                   "The final list is filtered by publication year and limited to a maximum number of books per author, "
+                   "so the results stay varied instead of repeating a single author.")
+        step_block(6, "Evaluation (leave-one-out)",
+                   "For every reader, one liked book is hidden. The model must then find it among all books in the "
+                   "catalogue. Hit Rate, NDCG and MRR measure how often and how high the hidden book appears "
+                   f"in the top {TOP_K}.")
+
+        st.markdown('<div class="am-section">Results</div>', unsafe_allow_html=True)
         st.caption(f"Leave-one-out: one liked book per reader is hidden, and the model must find it "
                    f"among {eda['model_items']:,} books. Higher is better.")
         hit, ndcg = f"HitRate@{TOP_K}", f"NDCG@{TOP_K}"
@@ -759,13 +791,13 @@ elif page == "📊  Analytics":
 
 
 # ─────────────────────────────────────────────────────────────
-# PAGE: RECOMMEND
+# PAGE: BOOK MATCHER (RECOMMEND)
 # ─────────────────────────────────────────────────────────────
-elif page == "🎯  Recommend":
+elif page == "Book Matcher":
     page_title("Find Your Next Book", "Tell us a book you love — or a reader profile — and we'll find what to read next.")
     settings = sidebar_settings()
 
-    tab_book, tab_reader = st.tabs(["📖 By a Book I Like", "👤 By Reader ID"])
+    tab_book, tab_reader = st.tabs(["By a Book I Like", "By Reader ID"])
 
     # ---------- by book ----------
     with tab_book:
@@ -834,10 +866,10 @@ elif page == "🎯  Recommend":
 
 
 # ─────────────────────────────────────────────────────────────
-# PAGE: BROWSE LIBRARY
+# PAGE: CATALOG (BROWSE LIBRARY)
 # ─────────────────────────────────────────────────────────────
-elif page == "📚  Browse Library":
-    page_title("Browse Library", "Explore the full catalog filtered by author, publisher or decade.")
+elif page == "Catalog":
+    page_title("Browse the Catalog", "Explore the full collection filtered by author, publisher or decade.")
 
     sidebar_label("Filters")
     sel_auth = st.sidebar.multiselect("Author", TOP_AUTHORS, default=[])
