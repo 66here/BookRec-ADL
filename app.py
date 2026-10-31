@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Aksara Match — Smart Book Recommendations (Dark Library Edition)
+Aksara Match — Smart Book Recommendations (tema "Tinta & Kertas")
 Hybrid recommender: Collaborative Filtering (SVD) + Content-Based (TF-IDF)
 
 Jalankan:  streamlit run app.py
@@ -16,6 +16,15 @@ import recsys
 # ─────────────────────────────────────────────────────────────
 # PAGE CONFIG
 # ─────────────────────────────────────────────────────────────
+try:  # best-effort: arahkan tema bawaan Streamlit ke terang (abaikan jika tidak didukung)
+    from streamlit import config as _cfg
+    for _k, _v in {"theme.base": "light", "theme.primaryColor": "#3B4BB8",
+                   "theme.backgroundColor": "#FAF5EC", "theme.secondaryBackgroundColor": "#F1E7D6",
+                   "theme.textColor": "#1F2433"}.items():
+        _cfg.set_option(_k, _v)
+except Exception:
+    pass
+
 st.set_page_config(
     page_title="Aksara Match — Book Recommendations",
     page_icon="📖",
@@ -24,45 +33,54 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────
-# GLOBAL CSS — Dark Library Theme (palet & gaya dari referensi CineMatch)
+# GLOBAL CSS — tema "Tinta & Kertas" (krem + indigo + terakota)
 # ─────────────────────────────────────────────────────────────
 st.markdown("""
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,800;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-/* ── Root Variables ── */
+/* ── Root Variables : tema "Tinta & Kertas" ── */
 :root {
-    --gold:       #E8B84B;
-    --gold-dim:   #a07c28;
-    --red:        #C0392B;
-    --bg:         #0a0a0f;
-    --bg2:        #111118;
-    --bg3:        #1a1a26;
-    --card:       #16161f;
-    --card-hover: #1e1e2e;
-    --border:     rgba(232,184,75,0.15);
-    --text:       #e8e6e0;
-    --text-dim:   #888899;
-    --font-head:  'Playfair Display', Georgia, serif;
-    --font-body:  'DM Sans', sans-serif;
+    --accent:      #3B4BB8;   /* indigo tinta */
+    --accent-dark: #2C3A94;
+    --accent2:     #D9593D;   /* terakota */
+    --amber:       #D98E04;   /* bintang rating */
+    --bg:          #FAF5EC;   /* kertas krem */
+    --bg2:         #F1E7D6;   /* pasir */
+    --card:        #FFFFFF;
+    --border:      rgba(31,36,51,0.10);
+    --line:        #E6DCC8;
+    --track:       #EDE3D0;
+    --bar-off:     #D8CDB6;
+    --img-bg:      #EFE6D3;
+    --text:        #1F2433;
+    --text-dim:    #5F6479;
+    --text-faint:  #9096A8;
+    --font-head:   'Fraunces', Georgia, serif;
+    --font-body:   'Plus Jakarta Sans', sans-serif;
+    --shadow:      0 6px 24px rgba(31,36,51,0.07);
+    --shadow-lg:   0 14px 36px rgba(31,36,51,0.14);
 }
 
-/* ── Global Reset ── */
+/* ── Global ── */
 html, body, [class*="css"] {
     font-family: var(--font-body);
-    background-color: var(--bg);
     color: var(--text);
 }
-.stApp { background-color: var(--bg); }
+.stApp {
+    background-color: var(--bg);
+    background-image: radial-gradient(rgba(59,75,184,0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+[data-testid="stAppViewContainer"], [data-testid="stMain"] { color: var(--text); }
 
-/* ── Hide Streamlit Chrome ── */
+/* ── Hide Streamlit Chrome (tombol sidebar tetap tampil) ── */
 #MainMenu, footer { visibility: hidden; }
 header { visibility: hidden; }
-/* Preserve sidebar toggle button inside header */
 [data-testid="stHeader"] button,
 [data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
 button[kind="header"],
-.st-emotion-cache-dvne4q,
 button[title="Open sidebar"],
 button[aria-label="Open sidebar"],
 button[aria-label="Close sidebar"] {
@@ -78,130 +96,169 @@ button[aria-label="Close sidebar"] {
 }
 [data-testid="stSidebar"] .stRadio label {
     font-family: var(--font-body);
-    font-size: 0.9rem;
+    font-size: 0.92rem;
+    font-weight: 500;
     color: var(--text-dim);
     cursor: pointer;
-    padding: 0.4rem 0.6rem;
-    border-radius: 6px;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
     transition: all 0.2s;
 }
-[data-testid="stSidebar"] .stRadio label:hover { color: var(--gold); }
-[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div + label { color: var(--gold); }
+[data-testid="stSidebar"] .stRadio label:hover {
+    color: var(--accent);
+    background: rgba(59,75,184,0.08);
+}
+[data-testid="stSidebar"] .stRadio label:has(input:checked) {
+    background: var(--accent);
+}
+[data-testid="stSidebar"] .stRadio label:has(input:checked) * { color: #FFFFFF !important; }
 
 /* ── Headings ── */
-h1, h2, h3 {
-    font-family: var(--font-head);
-    color: var(--text);
-}
-
-/* ── Gold Divider ── */
+h1, h2, h3 { font-family: var(--font-head); color: var(--text); font-weight: 800; letter-spacing: -0.01em; }
 hr { border-color: var(--border) !important; }
 
+/* ── Labels, caption, teks widget ── */
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label,
+[data-testid="stCheckbox"] label span, [data-testid="stRadio"] label p {
+    color: var(--text) !important;
+    font-weight: 500;
+}
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: var(--text-dim) !important; }
+
 /* ── Metrics ── */
-[data-testid="metric-container"] {
+[data-testid="metric-container"], [data-testid="stMetric"] {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 18px;
     padding: 1.2rem 1.5rem;
+    box-shadow: var(--shadow);
 }
-[data-testid="metric-container"] label {
+[data-testid="stMetric"] label, [data-testid="metric-container"] label,
+[data-testid="stMetricLabel"] p {
     color: var(--text-dim) !important;
-    font-size: 0.75rem !important;
+    font-size: 0.74rem !important;
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
-[data-testid="metric-container"] [data-testid="stMetricValue"] {
-    color: var(--gold) !important;
+[data-testid="stMetricValue"] {
+    color: var(--accent) !important;
     font-family: var(--font-head);
-    font-size: 2.2rem !important;
+    font-size: 2rem !important;
+    font-weight: 800;
 }
 
-/* ── Text Input ── */
-[data-testid="stTextInput"] input {
-    background: var(--bg3) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 8px !important;
+/* ── Text / Number Input ── */
+[data-testid="stTextInput"] input, [data-testid="stNumberInput"] input {
+    background: #FFFFFF !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 14px !important;
     color: var(--text) !important;
     font-family: var(--font-body);
     font-size: 1rem;
-    padding: 0.65rem 1rem !important;
-    transition: border 0.2s;
+    padding: 0.7rem 1.1rem !important;
+    transition: border 0.2s, box-shadow 0.2s;
 }
-[data-testid="stTextInput"] input:focus {
-    border-color: var(--gold) !important;
-    box-shadow: 0 0 0 2px rgba(232,184,75,0.12) !important;
+[data-testid="stTextInput"] input:focus, [data-testid="stNumberInput"] input:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(59,75,184,0.14) !important;
 }
+[data-testid="stNumberInput"] button { color: var(--text) !important; }
 
-/* ── Select Box ── */
+/* ── Select / Multiselect ── */
 [data-baseweb="select"] > div {
-    background: var(--bg3) !important;
-    border-color: var(--border) !important;
-    border-radius: 8px !important;
+    background: #FFFFFF !important;
+    border-color: var(--line) !important;
+    border-radius: 14px !important;
     color: var(--text) !important;
 }
+[data-baseweb="select"] * { color: var(--text); }
+[data-baseweb="tag"] {
+    background: rgba(59,75,184,0.12) !important;
+    border-radius: 999px !important;
+}
+[data-baseweb="tag"] * { color: var(--accent) !important; }
 
-/* ── Buttons ── */
+/* ── Slider ── */
+[data-testid="stSlider"] [role="slider"] { background: var(--accent) !important; box-shadow: none !important; }
+[data-testid="stSliderThumbValue"], [data-testid="stSlider"] [data-testid="stSliderThumbValue"] { color: var(--accent) !important; }
+[data-testid="stTickBarMin"], [data-testid="stTickBarMax"] { color: var(--text-dim) !important; }
+
+/* ── Buttons : outline default, solid untuk primary ── */
 .stButton > button {
-    background: var(--gold) !important;
-    color: #0a0a0f !important;
-    border: none !important;
-    border-radius: 8px !important;
+    background: #FFFFFF !important;
+    color: var(--accent) !important;
+    border: 1.5px solid var(--accent) !important;
+    border-radius: 999px !important;
     font-family: var(--font-body) !important;
     font-weight: 600 !important;
-    font-size: 0.9rem !important;
-    padding: 0.6rem 1.6rem !important;
-    letter-spacing: 0.04em;
+    font-size: 0.88rem !important;
+    padding: 0.5rem 1.4rem !important;
     transition: all 0.2s !important;
 }
 .stButton > button:hover {
-    background: #f5cc6a !important;
+    background: var(--accent) !important;
+    color: #FFFFFF !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(232,184,75,0.25) !important;
+    box-shadow: 0 6px 18px rgba(59,75,184,0.28) !important;
 }
-.stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, var(--gold), #d4a035) !important;
+.stButton > button p { color: inherit !important; }
+.stButton > button[kind="primary"],
+.stButton > button[data-testid="stBaseButton-primary"] {
+    background: linear-gradient(135deg, var(--accent), #5868D6) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+}
+.stButton > button[kind="primary"]:hover,
+.stButton > button[data-testid="stBaseButton-primary"]:hover {
+    background: linear-gradient(135deg, var(--accent-dark), var(--accent)) !important;
 }
 
-/* ── Progress Bar ── */
-[data-testid="stProgressBar"] > div { background: var(--bg3) !important; border-radius: 99px; }
-[data-testid="stProgressBar"] > div > div { background: linear-gradient(90deg, var(--gold), #f5cc6a) !important; border-radius: 99px; }
+/* ── Progress ── */
+[data-testid="stProgressBar"] > div { background: var(--track) !important; border-radius: 99px; }
+[data-testid="stProgressBar"] > div > div { background: linear-gradient(90deg, var(--accent), var(--accent2)) !important; border-radius: 99px; }
 
 /* ── Tabs ── */
-[data-baseweb="tab-list"] { border-bottom: 1px solid var(--border) !important; gap: 0.5rem; }
+[data-baseweb="tab-list"] { border-bottom: 1px solid var(--line) !important; gap: 0.4rem; }
 [data-baseweb="tab"] {
     font-family: var(--font-body) !important;
     color: var(--text-dim) !important;
     background: transparent !important;
     border: none !important;
-    padding: 0.5rem 1.2rem !important;
-    border-radius: 6px 6px 0 0;
+    padding: 0.55rem 1.2rem !important;
+    border-radius: 12px 12px 0 0;
+    font-weight: 500;
 }
 [aria-selected="true"][data-baseweb="tab"] {
-    color: var(--gold) !important;
-    border-bottom: 2px solid var(--gold) !important;
-    background: rgba(232,184,75,0.06) !important;
+    color: var(--accent) !important;
+    font-weight: 700;
+    background: rgba(59,75,184,0.07) !important;
 }
+[data-baseweb="tab-highlight"] { background-color: var(--accent2) !important; height: 3px !important; }
+[data-baseweb="tab-border"] { background-color: var(--line) !important; }
 
-/* ── Info / Warning Boxes ── */
+/* ── Alert / Expander ── */
 [data-testid="stAlert"] {
-    background: var(--card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 10px !important;
+    background: #FFFFFF !important;
+    border: 1px solid var(--line) !important;
+    border-left: 4px solid var(--accent2) !important;
+    border-radius: 14px !important;
     color: var(--text) !important;
 }
-
-/* ── Spinner text ── */
-[data-testid="stSpinner"] p { color: var(--gold) !important; }
-
-/* ── Multiselect ── */
-[data-baseweb="tag"] {
-    background: rgba(232,184,75,0.15) !important;
-    color: var(--gold) !important;
-    border-radius: 6px !important;
+[data-testid="stAlert"] * { color: var(--text) !important; }
+[data-testid="stExpander"] {
+    background: #FFFFFF;
+    border: 1px solid var(--line) !important;
+    border-radius: 16px !important;
 }
+[data-testid="stExpander"] summary, [data-testid="stExpander"] summary * { color: var(--text) !important; }
 
-/* ── Matplotlib / Charts ── */
-.stPlotlyChart, .stPyplot { background: transparent !important; }
+/* ── Spinner ── */
+[data-testid="stSpinner"] p { color: var(--accent) !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--bar-off); border-radius: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -211,16 +268,16 @@ hr { border-color: var(--border) !important; }
 # ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-.am-card{background:#16161f;border:1px solid rgba(232,184,75,0.15);border-radius:12px;
-         overflow:hidden;margin-bottom:0.5rem;transition:all .25s;}
-.am-card:hover{border-color:rgba(232,184,75,0.45);transform:translateY(-2px);}
-.am-title{font-family:'Playfair Display',serif;font-weight:700;color:#e8e6e0;line-height:1.35;}
-.am-sub{color:#888899;font-size:0.8rem;margin-top:2px;}
-.am-label{font-size:0.68rem;color:#888899;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:0.25rem;}
-.am-chip{display:inline-block;background:rgba(232,184,75,0.1);border:1px solid rgba(232,184,75,0.3);
-         color:#E8B84B;padding:2px 10px;border-radius:20px;font-size:0.72rem;margin:0 6px 6px 0;}
-.am-reason{color:#888899;font-size:0.78rem;font-style:italic;margin-top:0.5rem;line-height:1.4;}
-.am-section{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.1em;color:#888899;margin:1rem 0 0.4rem;}
+.am-card{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;
+         margin-bottom:0.5rem;box-shadow:var(--shadow);transition:all .25s;}
+.am-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
+.am-title{font-family:var(--font-head);font-weight:800;color:var(--text);line-height:1.3;}
+.am-sub{color:var(--text-dim);font-size:0.8rem;margin-top:2px;}
+.am-label{font-size:0.68rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:0.25rem;font-weight:600;}
+.am-chip{display:inline-block;background:rgba(217,89,61,0.10);border:1px solid rgba(217,89,61,0.28);
+         color:var(--accent2);padding:2px 11px;border-radius:999px;font-size:0.72rem;font-weight:600;margin:0 6px 6px 0;}
+.am-reason{color:var(--text-dim);font-size:0.78rem;font-style:italic;margin-top:0.5rem;line-height:1.4;}
+.am-section{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin:1rem 0 0.4rem;font-weight:600;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -252,7 +309,7 @@ except FileNotFoundError:
     st.stop()
 
 items, eda, metrics, TOP_K = art["items"], art["eda"], art["metrics"], art["top_k"]
-GOLD, BG, CARD = "#E8B84B", "#111118", "#16161f"
+ACCENT, ACCENT2 = "var(--accent)", "var(--accent2)"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -292,11 +349,11 @@ def cover_html(url, h=300):
     if isinstance(url, str) and url.startswith("http"):
         url = url.replace("http://", "https://")
         return (f'<img src="{esc(url)}" style="width:100%;height:{h}px;object-fit:contain;'
-                f'background:#0d0d18;display:block;">')
-    return (f'<div style="width:100%;height:{h}px;background:#0d0d18;display:flex;flex-direction:column;'
+                f'background:var(--img-bg);display:block;">')
+    return (f'<div style="width:100%;height:{h}px;background:var(--img-bg);display:flex;flex-direction:column;'
             f'align-items:center;justify-content:center;gap:.5rem;">'
             f'<div style="font-size:2.5rem;opacity:.25;">📖</div>'
-            f'<div style="font-size:.8rem;color:#555566;">No Cover</div></div>')
+            f'<div style="font-size:.8rem;color:var(--text-faint);">No Cover</div></div>')
 
 
 def open_detail(isbn):
@@ -323,12 +380,12 @@ def rec_card(row, key):
             <div style="margin-top:.6rem;">{chips(row)}</div>
             <div class="am-label" style="margin-top:.4rem;">Match Score</div>
             <div style="display:flex;align-items:center;gap:10px;">
-                <div style="flex:1;background:#1a1a26;border-radius:99px;height:6px;overflow:hidden;">
-                    <div style="width:{pct:.1f}%;height:100%;background:linear-gradient(90deg,#E8B84B,#f5cc6a);border-radius:99px;"></div>
+                <div style="flex:1;background:var(--track);border-radius:99px;height:6px;overflow:hidden;">
+                    <div style="width:{pct:.1f}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;"></div>
                 </div>
-                <span style="color:#E8B84B;font-size:.85rem;font-weight:600;">{score:.2f}</span>
+                <span style="color:var(--accent);font-size:.85rem;font-weight:600;">{score:.2f}</span>
             </div>
-            <div style="color:#555566;font-size:.72rem;margin-top:.35rem;">
+            <div style="color:var(--text-faint);font-size:.72rem;margin-top:.35rem;">
                 Readers' taste {row['s_cf']:.2f} · Content {row['s_content']:.2f}</div>
             {reason_html}
         </div>
@@ -339,7 +396,7 @@ def rec_card(row, key):
 
 def mini_card(row, key, h=190, show_rating=True):
     r = row.get("avg_rating")
-    rating_html = (f'<div style="color:#E8B84B;font-size:1rem;font-weight:700;margin-top:.4rem;">'
+    rating_html = (f'<div style="color:var(--amber);font-size:1rem;font-weight:700;margin-top:.4rem;">'
                    f'{rating_txt(r)}</div>') if show_rating else ""
     st.markdown(H(f"""
     <div class="am-card" style="text-align:center;">
@@ -348,7 +405,7 @@ def mini_card(row, key, h=190, show_rating=True):
             <div class="am-title" style="font-size:.82rem;min-height:40px;">{esc(str(row['title'])[:42])}{'…' if len(str(row['title'])) > 42 else ''}</div>
             <div class="am-sub">{esc(str(row['author'])[:28])}</div>
             {rating_html}
-            <div style="color:#555566;font-size:.72rem;">{int(row['n_inter']):,} readers</div>
+            <div style="color:var(--text-faint);font-size:.72rem;">{int(row['n_inter']):,} readers</div>
         </div>
     </div>
     """), unsafe_allow_html=True)
@@ -365,8 +422,8 @@ def browse_card(row, key):
                 <div class="am-title" style="font-size:.95rem;">{esc(str(row['title'])[:70])}</div>
                 <div class="am-sub">{esc(row['author'])}</div>
                 <div class="am-sub">{year_txt(row['year'])} · {esc(row['publisher'])}</div>
-                <div style="color:#E8B84B;font-weight:700;margin-top:.6rem;">{rating_txt(r)}</div>
-                <div style="color:#555566;font-size:.72rem;">{int(row['n_inter']):,} readers</div>
+                <div style="color:var(--amber);font-weight:700;margin-top:.6rem;">{rating_txt(r)}</div>
+                <div style="color:var(--text-faint);font-size:.72rem;">{int(row['n_inter']):,} readers</div>
             </div>
         </div>
     </div>
@@ -380,10 +437,10 @@ def render_recs(recs, eyebrow, title, prefix):
         return
     st.markdown(H(f"""
     <div style="margin:2rem 0 1.5rem;">
-        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:#E8B84B;margin-bottom:.4rem;">{esc(eyebrow)}</div>
-        <h2 style="font-family:'Playfair Display',serif;font-size:2rem;margin:0;">{esc(title)}</h2>
+        <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent2);font-weight:600;margin-bottom:.4rem;">{esc(eyebrow)}</div>
+        <h2 style="font-family:var(--font-head);font-size:2rem;margin:0;">{esc(title)}</h2>
     </div>
-    <hr style="border-color:rgba(232,184,75,0.12);margin-bottom:1.5rem;">
+    <hr style="border-color:rgba(59,75,184,0.12);margin-bottom:1.5rem;">
     """), unsafe_allow_html=True)
     for start in range(0, len(recs), 2):
         cols = st.columns(2, gap="medium")
@@ -394,14 +451,14 @@ def render_recs(recs, eyebrow, title, prefix):
 
 def page_title(title, subtitle):
     st.markdown(H(f"""
-    <h1 style="font-family:'Playfair Display',serif;font-size:2.4rem;margin-bottom:.3rem;">{title}</h1>
-    <p style="color:#888899;margin-bottom:1.5rem;">{subtitle}</p>
+    <h1 style="font-family:var(--font-head);font-size:2.4rem;margin-bottom:.3rem;">{title}</h1>
+    <p style="color:var(--text-dim);margin-bottom:1.5rem;">{subtitle}</p>
     """), unsafe_allow_html=True)
 
 
 def sidebar_label(text):
     st.sidebar.markdown(H(f"""
-    <div style="font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:#888899;
+    <div style="font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);
                 margin-bottom:.5rem;margin-top:1.2rem;">{text}</div>
     """), unsafe_allow_html=True)
 
@@ -442,16 +499,16 @@ with st.sidebar:
     st.markdown("""
     <div style="padding:1.5rem 0 1rem;text-align:center;">
         <div style="font-size:2.4rem;margin-bottom:0.3rem;">📖</div>
-        <div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;
-                    background:linear-gradient(135deg,#E8B84B,#f5cc6a);
+        <div style="font-family:var(--font-head);font-size:1.5rem;font-weight:900;
+                    background:linear-gradient(135deg,var(--accent),var(--accent2));
                     -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
             Aksara Match
         </div>
-        <div style="font-size:0.72rem;color:#888899;letter-spacing:0.12em;text-transform:uppercase;margin-top:2px;">
+        <div style="font-size:0.72rem;color:var(--text-dim);letter-spacing:0.12em;text-transform:uppercase;margin-top:2px;">
             Smart Book Recommendations
         </div>
     </div>
-    <hr style="border-color:rgba(232,184,75,0.15);margin:0 0 1.2rem;">
+    <hr style="border-color:rgba(59,75,184,0.15);margin:0 0 1.2rem;">
     """, unsafe_allow_html=True)
 
     page = st.radio(
@@ -461,12 +518,12 @@ with st.sidebar:
     )
 
     if st.session_state.get("detail_book"):
-        st.markdown("<hr style='border-color:rgba(232,184,75,0.1);margin:1rem 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color:rgba(59,75,184,0.1);margin:1rem 0;'>", unsafe_allow_html=True)
         if st.button("← Back", use_container_width=True):
             st.session_state["detail_book"] = None
             st.rerun()
 
-    st.markdown("<hr style='border-color:rgba(232,184,75,0.1);margin:1.5rem 0 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color:rgba(59,75,184,0.1);margin:1.5rem 0 0;'>", unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -485,23 +542,23 @@ if st.session_state.get("detail_book"):
         if url:
             url = url.replace("http://", "https://")
             st.markdown(f'<img src="{esc(url)}" style="width:100%;border-radius:14px;'
-                        f'box-shadow:0 8px 40px rgba(0,0,0,0.6);display:block;background:#0d0d18;">',
+                        f'box-shadow:0 8px 40px rgba(31,36,51,0.30);display:block;background:var(--img-bg);">',
                         unsafe_allow_html=True)
         else:
             st.markdown(H("""
-            <div style="width:100%;height:380px;background:#16161f;border:1px solid rgba(232,184,75,0.15);
+            <div style="width:100%;height:380px;background:var(--card);border:1px solid rgba(59,75,184,0.15);
                         border-radius:14px;display:flex;flex-direction:column;align-items:center;
                         justify-content:center;gap:.5rem;">
                 <div style="font-size:3rem;opacity:.2;">📖</div>
-                <div style="font-size:.8rem;color:#888899;">No Cover Available</div>
+                <div style="font-size:.8rem;color:var(--text-dim);">No Cover Available</div>
             </div>"""), unsafe_allow_html=True)
 
     with col_info:
         st.markdown(H(f"""
         <div style="margin-bottom:.6rem;">
-            <h1 style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;margin:0 0 .3rem;line-height:1.15;">{esc(b['title'])}</h1>
-            <div style="color:#E8B84B;font-size:1.05rem;margin-bottom:.3rem;">by {esc(b['author'])}</div>
-            <div style="color:#888899;font-size:.9rem;">{year_txt(b['year'])} · {esc(b['publisher'])}</div>
+            <h1 style="font-family:var(--font-head);font-size:2.2rem;font-weight:900;margin:0 0 .3rem;line-height:1.15;">{esc(b['title'])}</h1>
+            <div style="color:var(--accent2);font-size:1.05rem;font-weight:600;margin-bottom:.3rem;">by {esc(b['author'])}</div>
+            <div style="color:var(--text-dim);font-size:.9rem;">{year_txt(b['year'])} · {esc(b['publisher'])}</div>
         </div>"""), unsafe_allow_html=True)
         st.markdown(f'<div style="margin:.8rem 0 1rem;">{chips(b)}</div>', unsafe_allow_html=True)
 
@@ -509,21 +566,21 @@ if st.session_state.get("detail_book"):
         r = b["avg_rating"]
         if pd.notna(r):
             st.markdown(H(f"""
-            <div style="background:#16161f;border:1px solid rgba(232,184,75,0.15);border-radius:12px;
+            <div style="background:var(--card);border:1px solid rgba(59,75,184,0.15);border-radius:12px;
                         padding:1rem 1.2rem;display:inline-block;min-width:200px;">
                 <div class="am-label">Reader Rating (Dataset)</div>
-                <div style="color:#E8B84B;font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;">
-                    {r:.2f}<span style="font-size:1rem;color:#555566;">/10</span></div>
-                <div style="color:#E8B84B;font-size:.9rem;margin-top:.2rem;">{stars10(r)}</div>
-                <div style="color:#555566;font-size:.72rem;margin-top:.2rem;">from {int(b['n_explicit']):,} explicit ratings</div>
+                <div style="color:var(--amber);font-family:var(--font-head);font-size:2rem;font-weight:800;">
+                    {r:.2f}<span style="font-size:1rem;color:var(--text-faint);">/10</span></div>
+                <div style="color:var(--amber);font-size:.9rem;margin-top:.2rem;">{stars10(r)}</div>
+                <div style="color:var(--text-faint);font-size:.72rem;margin-top:.2rem;">from {int(b['n_explicit']):,} explicit ratings</div>
             </div>"""), unsafe_allow_html=True)
         else:
             st.markdown(H("""
-            <div style="background:#16161f;border:1px solid rgba(232,184,75,0.15);border-radius:12px;
+            <div style="background:var(--card);border:1px solid rgba(59,75,184,0.15);border-radius:12px;
                         padding:1rem 1.2rem;display:inline-block;min-width:200px;">
                 <div class="am-label">Reader Rating (Dataset)</div>
-                <div style="color:#555566;font-size:1.5rem;">—</div>
-                <div style="color:#555566;font-size:.72rem;">no explicit ratings yet</div>
+                <div style="color:var(--text-faint);font-size:1.5rem;">—</div>
+                <div style="color:var(--text-faint);font-size:.72rem;">no explicit ratings yet</div>
             </div>"""), unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:1.2rem;'></div>", unsafe_allow_html=True)
@@ -533,7 +590,7 @@ if st.session_state.get("detail_book"):
         m3.metric("🔖 ISBN", str(b["isbn"]))
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("""<h2 style="font-family:'Playfair Display',serif;font-size:1.6rem;margin-bottom:1.2rem;">
+    st.markdown("""<h2 style="font-family:var(--font-head);font-size:1.6rem;margin-bottom:1.2rem;">
         ✨ More Like This</h2>""", unsafe_allow_html=True)
     sim = recsys.similar_books(art, isbn, k=6)
     if len(sim):
@@ -551,22 +608,22 @@ if st.session_state.get("detail_book"):
 if page == "🏠  Home":
     st.markdown("""
     <div style="position:relative;padding:4rem 2rem 3.5rem;margin:-2rem -2.5rem 2rem;
-                background:linear-gradient(135deg,#0a0a0f 0%,#12121e 50%,#0f0f18 100%);
-                border-bottom:1px solid rgba(232,184,75,0.12);overflow:hidden;">
+                background:linear-gradient(135deg,#FFF9EC 0%,#F7ECD8 55%,#F2E3C8 100%);border-radius:0 0 32px 32px;
+                border-bottom:1px solid var(--border);overflow:hidden;">
         <div style="position:absolute;top:-60px;right:-60px;width:320px;height:320px;
-                    background:radial-gradient(circle,rgba(232,184,75,0.06) 0%,transparent 70%);
+                    background:radial-gradient(circle,rgba(217,89,61,0.16) 0%,transparent 70%);
                     border-radius:50%;pointer-events:none;"></div>
         <div style="position:absolute;bottom:-80px;left:10%;width:500px;height:200px;
-                    background:radial-gradient(ellipse,rgba(192,57,43,0.05) 0%,transparent 70%);
+                    background:radial-gradient(ellipse,rgba(59,75,184,0.12) 0%,transparent 70%);
                     pointer-events:none;"></div>
-        <div style="position:relative;max-width:800px;">
-            <h1 style="font-family:'Playfair Display',serif;font-size:clamp(2.2rem,4vw,3.6rem);
+        <div style="position:relative;max-width:800px;"><span class="am-chip" style="margin-bottom:1rem;">📖 Hybrid book recommender</span>
+            <h1 style="font-family:var(--font-head);font-size:clamp(2.2rem,4vw,3.6rem);
                        font-weight:900;line-height:1.1;margin:0 0 1rem;
-                       background:linear-gradient(135deg,#e8e6e0,#E8B84B 60%,#f5cc6a);
+                       background:linear-gradient(135deg,var(--text),var(--accent) 60%,var(--accent2));
                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
                 Discover Your Next<br>Favorite Book
             </h1>
-            <p style="color:#888899;font-size:1.05rem;max-width:540px;line-height:1.7;margin:0;">
+            <p style="color:var(--text-dim);font-size:1.05rem;max-width:540px;line-height:1.7;margin:0;">
                 Aksara Match blends collaborative filtering with content-based intelligence
                 to surface books you'll love — before you even know to look for them.
             </p>
@@ -581,7 +638,7 @@ if page == "🏠  Home":
     c4.metric("⭐ Avg Rating", f"{AVG_ALL:.2f} / 10")
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("""<h2 style="font-family:'Playfair Display',serif;font-size:1.6rem;margin-bottom:1.5rem;">
+    st.markdown("""<h2 style="font-family:var(--font-head);font-size:1.6rem;margin-bottom:1.5rem;">
         How It Works</h2>""", unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
@@ -593,12 +650,12 @@ if page == "🏠  Home":
         col.markdown(H(f"""
         <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;height:100%;">
             <div style="font-size:2rem;margin-bottom:.8rem;">{icon}</div>
-            <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:#e8e6e0;margin-bottom:.5rem;">{ttl}</div>
-            <div style="color:#888899;font-size:.88rem;line-height:1.6;">{desc}</div>
+            <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">{ttl}</div>
+            <div style="color:var(--text-dim);font-size:.88rem;line-height:1.6;">{desc}</div>
         </div>"""), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("""<h2 style="font-family:'Playfair Display',serif;font-size:1.6rem;margin-bottom:1.2rem;">
+    st.markdown("""<h2 style="font-family:var(--font-head);font-size:1.6rem;margin-bottom:1.2rem;">
         🔥 Top Rated Books in Dataset</h2>""", unsafe_allow_html=True)
 
     pool = items[items["n_explicit"] >= 30]
@@ -620,25 +677,25 @@ elif page == "📊  Analytics":
     # ── chart HTML/CSS murni (tanpa library tambahan) ──
     def chart_card(title, inner):
         st.markdown(H(f"""
-        <div style="background:#111118;border:1px solid rgba(232,184,75,0.12);border-radius:14px;
+        <div style="background:var(--card);border:1px solid rgba(59,75,184,0.12);border-radius:14px;
                     padding:1.2rem 1.4rem;margin-bottom:1rem;">
-            <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;
-                        color:#e8e6e0;margin-bottom:.9rem;">{esc(title)}</div>
+            <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:700;
+                        color:var(--text);margin-bottom:.9rem;">{esc(title)}</div>
             {inner}
         </div>"""), unsafe_allow_html=True)
 
-    def hbars(series, title, color=GOLD, highlight=None, fmt="{:,.0f}", label_w=150):
+    def hbars(series, title, color=ACCENT, highlight=None, fmt="{:,.0f}", label_w=150):
         mx = float(max(series.values)) if len(series) else 1.0
         rows = ""
         for lab, val in series.items():
             w = 100 * float(val) / mx if mx > 0 else 0
-            c = color if highlight is None else (GOLD if lab == highlight else "#2a2a3e")
+            c = color if highlight is None else (ACCENT2 if lab == highlight else "var(--bar-off)")
             rows += (f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">'
-                     f'<div style="width:{label_w}px;text-align:right;color:#e8e6e0;font-size:.8rem;'
+                     f'<div style="width:{label_w}px;text-align:right;color:var(--text);font-size:.8rem;'
                      f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{esc(lab)}">{esc(lab)}</div>'
-                     f'<div style="flex:1;background:#1a1a26;border-radius:6px;height:18px;overflow:hidden;">'
+                     f'<div style="flex:1;background:var(--track);border-radius:6px;height:18px;overflow:hidden;">'
                      f'<div style="width:{w:.1f}%;height:100%;background:{c};border-radius:6px;"></div></div>'
-                     f'<div style="width:72px;color:#888899;font-size:.78rem;">{fmt.format(float(val))}</div></div>')
+                     f'<div style="width:72px;color:var(--text-dim);font-size:.78rem;">{fmt.format(float(val))}</div></div>')
         chart_card(title, rows)
 
     def vbars(labels, values, title, highlight=None, height=200, note=""):
@@ -648,17 +705,17 @@ elif page == "📊  Analytics":
         bars, labs = "", ""
         for i, (lab, v) in enumerate(zip(labels, vals)):
             hgt = 100 * v / mx if mx > 0 else 0
-            c = GOLD if (highlight is None or str(lab) in highlight) else "#2a2a3e"
+            c = ACCENT2 if (highlight is not None and str(lab) in highlight) else ACCENT
             bars += (f'<div title="{esc(lab)}: {v:,.0f}" style="flex:1;height:{hgt:.1f}%;min-height:1px;'
                      f'background:{c};border-radius:3px 3px 0 0;"></div>')
             txt = esc(lab) if i % step == 0 else ""
             labs += (f'<div style="flex:1;display:flex;justify-content:center;">'
-                     f'<span style="color:#888899;font-size:.66rem;white-space:nowrap;">{txt}</span></div>')
+                     f'<span style="color:var(--text-dim);font-size:.66rem;white-space:nowrap;">{txt}</span></div>')
         inner = (f'<div style="display:flex;align-items:flex-end;gap:2px;height:{height}px;'
-                 f'border-bottom:1px solid #1e1e2e;">{bars}</div>'
+                 f'border-bottom:1px solid var(--line);">{bars}</div>'
                  f'<div style="display:flex;gap:2px;margin-top:4px;">{labs}</div>')
         if note:
-            inner += f'<div style="color:#555566;font-size:.72rem;margin-top:.6rem;">{esc(note)}</div>'
+            inner += f'<div style="color:var(--text-faint);font-size:.72rem;margin-top:.6rem;">{esc(note)}</div>'
         chart_card(title, inner)
 
     t1, t2, t3, t4 = st.tabs(["⭐ Rating Distribution", "🌍 Readers & Authors",
@@ -675,10 +732,10 @@ elif page == "📊  Analytics":
         a_col, b_col = st.columns(2)
         with a_col:
             tc = pd.Series(eda["top_countries"]).sort_values(ascending=False)
-            hbars(tc, "Top Countries by Readers", color=GOLD, label_w=120)
+            hbars(tc, "Top Countries by Readers", color=ACCENT, label_w=120)
         with b_col:
             ta = pd.Series(eda["top_authors"]).sort_values(ascending=False)
-            hbars(ta, "Most Read Authors", color="#C0392B", label_w=150)
+            hbars(ta, "Most Read Authors", color=ACCENT2, label_w=150)
         ah = pd.Series(eda["age_hist"]).sort_index()
         ah = ah[(ah.index >= 5) & (ah.index <= 90)]
         vbars([str(int(i)) for i in ah.index], ah.values, "Reader Age Distribution (where available)",
@@ -813,7 +870,7 @@ elif page == "📚  Browse Library":
     tags = "".join(f'<span class="am-chip">{esc(n)}: {esc(", ".join(v[:2]))}{"…" if len(v) > 2 else ""}</span>'
                    for n, v in active if v)
     if tags:
-        st.markdown(f'<div style="margin-bottom:1.2rem;"><span style="color:#888899;font-size:.85rem;margin-right:8px;">Browsing:</span>{tags}</div>',
+        st.markdown(f'<div style="margin-bottom:1.2rem;"><span style="color:var(--text-dim);font-size:.85rem;margin-right:8px;">Browsing:</span>{tags}</div>',
                     unsafe_allow_html=True)
 
     if len(f) == 0:
