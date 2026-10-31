@@ -637,7 +637,7 @@ if page == "Overview":
                        font-weight:900;line-height:1.15;margin:0 0 1rem;
                        background:linear-gradient(135deg,var(--text),var(--accent) 60%,var(--accent2));
                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-                “A landscape of books<br>waiting to be explored.”
+                A landscape of books<br>waiting to be explored.
             </h1>
             <p style="color:var(--text-dim);font-size:1.05rem;max-width:540px;line-height:1.7;margin:0;">
                 Discover books tailored to your taste and explore stories waiting to become your next favorite.
