@@ -7,7 +7,6 @@ Jalankan:  streamlit run app.py
 """
 import html
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -618,64 +617,77 @@ if page == "🏠  Home":
 elif page == "📊  Analytics":
     page_title("Dataset Analytics", "Deep-dive into the reading landscape behind the recommendations.")
 
-    TXT, SPINE, GRID = "#e8e6e0", "#1e1e2e", (1.0, 1.0, 1.0, 0.06)
+    # ── chart HTML/CSS murni (tanpa library tambahan) ──
+    def chart_card(title, inner):
+        st.markdown(H(f"""
+        <div style="background:#111118;border:1px solid rgba(232,184,75,0.12);border-radius:14px;
+                    padding:1.2rem 1.4rem;margin-bottom:1rem;">
+            <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;
+                        color:#e8e6e0;margin-bottom:.9rem;">{esc(title)}</div>
+            {inner}
+        </div>"""), unsafe_allow_html=True)
 
-    def dark_axes(w=11, h=4.6):
-        fig, ax = plt.subplots(figsize=(w, h), facecolor=BG)
-        ax.set_facecolor(BG)
-        ax.tick_params(colors=TXT, labelsize=9)
-        for sp in ax.spines.values():
-            sp.set_color(SPINE)
-        ax.set_axisbelow(True)
-        return fig, ax
+    def hbars(series, title, color=GOLD, highlight=None, fmt="{:,.0f}", label_w=150):
+        mx = float(max(series.values)) if len(series) else 1.0
+        rows = ""
+        for lab, val in series.items():
+            w = 100 * float(val) / mx if mx > 0 else 0
+            c = color if highlight is None else (GOLD if lab == highlight else "#2a2a3e")
+            rows += (f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">'
+                     f'<div style="width:{label_w}px;text-align:right;color:#e8e6e0;font-size:.8rem;'
+                     f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{esc(lab)}">{esc(lab)}</div>'
+                     f'<div style="flex:1;background:#1a1a26;border-radius:6px;height:18px;overflow:hidden;">'
+                     f'<div style="width:{w:.1f}%;height:100%;background:{c};border-radius:6px;"></div></div>'
+                     f'<div style="width:72px;color:#888899;font-size:.78rem;">{fmt.format(float(val))}</div></div>')
+        chart_card(title, rows)
 
-    def finish(fig, ax, title, xl="", yl="", grid="y"):
-        ax.set_title(title, color=TXT, fontfamily="serif", fontsize=15, fontweight="bold", pad=14)
-        ax.set_xlabel(xl, color=TXT, fontsize=10)
-        ax.set_ylabel(yl, color=TXT, fontsize=10)
-        ax.grid(True, axis=grid, color=GRID, linestyle="--", linewidth=0.5)
-        fig.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
+    def vbars(labels, values, title, highlight=None, height=200, note=""):
+        vals = [float(v) for v in values]
+        mx = max(vals) if vals else 1.0
+        step = max(1, len(labels) // 12)
+        bars, labs = "", ""
+        for i, (lab, v) in enumerate(zip(labels, vals)):
+            hgt = 100 * v / mx if mx > 0 else 0
+            c = GOLD if (highlight is None or str(lab) in highlight) else "#2a2a3e"
+            bars += (f'<div title="{esc(lab)}: {v:,.0f}" style="flex:1;height:{hgt:.1f}%;min-height:1px;'
+                     f'background:{c};border-radius:3px 3px 0 0;"></div>')
+            txt = esc(lab) if i % step == 0 else ""
+            labs += (f'<div style="flex:1;display:flex;justify-content:center;">'
+                     f'<span style="color:#888899;font-size:.66rem;white-space:nowrap;">{txt}</span></div>')
+        inner = (f'<div style="display:flex;align-items:flex-end;gap:2px;height:{height}px;'
+                 f'border-bottom:1px solid #1e1e2e;">{bars}</div>'
+                 f'<div style="display:flex;gap:2px;margin-top:4px;">{labs}</div>')
+        if note:
+            inner += f'<div style="color:#555566;font-size:.72rem;margin-top:.6rem;">{esc(note)}</div>'
+        chart_card(title, inner)
 
     t1, t2, t3, t4 = st.tabs(["⭐ Rating Distribution", "🌍 Readers & Authors",
                               "📅 Publication Years", "🧪 Model Evaluation"])
 
     with t1:
         rd = pd.Series(eda["rating_dist"]).sort_index()
-        fig, ax = dark_axes()
-        ax.bar([str(i) for i in rd.index], rd.values,
-               color=[GOLD if int(i) == 0 else "#2a2a3e" for i in rd.index], width=0.7)
-        finish(fig, ax, "Rating Distribution (0 = read, not rated)", "Rating", "Count")
-        st.caption(f"{eda['pct_implicit']*100:.0f}% of all interactions are implicit (rating 0). "
+        vbars([str(int(i)) for i in rd.index], rd.values, "Rating Distribution (0 = read, not rated)",
+              highlight={"0"}, height=240,
+              note=f"{eda['pct_implicit']*100:.0f}% of all interactions are implicit (rating 0). "
                    "They are kept as positive signals in the model.")
 
     with t2:
-        a, b = st.columns(2)
-        with a:
-            tc = pd.Series(eda["top_countries"]).sort_values()
-            fig, ax = dark_axes(6, 5)
-            ax.barh(tc.index, tc.values, color=GOLD)
-            finish(fig, ax, "Top Countries by Readers", grid="x")
-        with b:
-            ta = pd.Series(eda["top_authors"]).sort_values()
-            fig, ax = dark_axes(6, 5)
-            ax.barh(ta.index, ta.values, color="#C0392B")
-            finish(fig, ax, "Most Read Authors", grid="x")
+        a_col, b_col = st.columns(2)
+        with a_col:
+            tc = pd.Series(eda["top_countries"]).sort_values(ascending=False)
+            hbars(tc, "Top Countries by Readers", color=GOLD, label_w=120)
+        with b_col:
+            ta = pd.Series(eda["top_authors"]).sort_values(ascending=False)
+            hbars(ta, "Most Read Authors", color="#C0392B", label_w=150)
         ah = pd.Series(eda["age_hist"]).sort_index()
         ah = ah[(ah.index >= 5) & (ah.index <= 90)]
-        fig, ax = dark_axes(11, 3.6)
-        ax.bar(ah.index, ah.values, color="#2a2a3e", width=0.8)
-        ax.bar(ah.idxmax(), ah.max(), color=GOLD, width=0.8)
-        finish(fig, ax, "Reader Age Distribution (where available)", "Age", "Readers")
+        vbars([str(int(i)) for i in ah.index], ah.values, "Reader Age Distribution (where available)",
+              highlight={str(int(ah.idxmax()))}, height=170)
 
     with t3:
         yh = pd.Series(eda["year_hist"]).sort_index()
         yh = yh[yh.index >= 1950]
-        fig, ax = dark_axes()
-        ax.fill_between(yh.index, yh.values, color=GOLD, alpha=0.25)
-        ax.plot(yh.index, yh.values, color=GOLD, linewidth=2)
-        finish(fig, ax, "Books by Publication Year", "Year", "Books")
+        vbars([str(int(i)) for i in yh.index], yh.values, "Books by Publication Year", height=240)
 
     with t4:
         st.caption(f"Leave-one-out: one liked book per reader is hidden, and the model must find it "
@@ -683,12 +695,10 @@ elif page == "📊  Analytics":
         hit, ndcg = f"HitRate@{TOP_K}", f"NDCG@{TOP_K}"
         st.dataframe(metrics.style.format({hit: "{:.2%}", ndcg: "{:.4f}", "MRR": "{:.4f}"}),
                      use_container_width=True, hide_index=True)
-        m = metrics.sort_values(hit)
-        fig, ax = dark_axes(11, 4.8)
-        best_i = m[hit].idxmax()
-        ax.barh(m["model"], m[hit] * 100,
-                color=[GOLD if i == best_i else "#2a2a3e" for i in m.index])
-        finish(fig, ax, f"HitRate@{TOP_K} per Model (%)", grid="x")
+        m = metrics.sort_values(hit, ascending=False)
+        best_model = m.iloc[0]["model"]
+        hbars(pd.Series((m[hit] * 100).values, index=m["model"].values),
+              f"HitRate@{TOP_K} per Model", highlight=best_model, fmt="{:.2f}%", label_w=190)
 
 
 # ─────────────────────────────────────────────────────────────
