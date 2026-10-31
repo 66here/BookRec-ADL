@@ -60,19 +60,32 @@ def result_table(df):
 st.sidebar.title("📚 Book Recommender")
 st.sidebar.caption("Hybrid: Collaborative Filtering (SVD) + Content-Based "
                    "(TF-IDF)")
+SETTING_KEYS = ["k", "max_auth", "yr_rng", "use_custom", "w_cf"]
+
+
+def reset_settings():
+    """Hapus nilai tersimpan -> semua widget kembali ke default."""
+    for key in SETTING_KEYS:
+        st.session_state.pop(key, None)
+
+
 st.sidebar.markdown("### Pengaturan")
-k = st.sidebar.slider("Jumlah rekomendasi", 5, 20, 10)
-max_auth = st.sidebar.slider("Maks. buku per penulis", 1, 5, 2)
+st.sidebar.button("🔄 Reset pengaturan", on_click=reset_settings,
+                  use_container_width=True)
+k = st.sidebar.slider("Jumlah rekomendasi", 5, 20, 10, key="k")
+max_auth = st.sidebar.slider("Maks. buku per penulis", 1, 5, 2, key="max_auth")
 yr_valid = items["year"].dropna()
 yr_rng = st.sidebar.slider("Rentang tahun terbit",
                            int(yr_valid.min()), int(yr_valid.max()),
-                           (int(yr_valid.min()), int(yr_valid.max())))
+                           (int(yr_valid.min()), int(yr_valid.max())),
+                           key="yr_rng")
 st.sidebar.markdown("### Bobot Hybrid")
 bw = art["best_w"]
-use_custom = st.sidebar.checkbox("Atur bobot manual", value=False)
+use_custom = st.sidebar.checkbox("Atur bobot manual", value=False,
+                                 key="use_custom")
 if use_custom:
     w_cf = st.sidebar.slider("Bobot Collaborative (CF)", 0.0, 1.0,
-                             float(bw[0]), 0.05)
+                             float(bw[0]), 0.05, key="w_cf")
     weights = (w_cf, round(1 - w_cf, 2))
     st.sidebar.caption(f"Bobot Content-Based otomatis = {weights[1]}")
 else:
@@ -197,6 +210,9 @@ with tab3:
     if picks:
         lib = items.set_index("isbn")
         st.markdown("**Daftar bukumu:**")
+        if st.button("🧹 Kosongkan daftar"):
+            st.session_state["picks"] = {}
+            st.rerun()
         for isbn, r in list(picks.items()):
             a, b = st.columns([6, 1])
             a.write(f"• {lib.at[isbn, 'title']} — {lib.at[isbn, 'author']} (⭐ {r})")
