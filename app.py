@@ -9,7 +9,7 @@ import streamlit as st
 
 import recsys
 
-st.set_page_config(page_title="Book Recommender", page_icon="📚", layout="wide")
+st.set_page_config(page_title="Book Recommendation", page_icon="📚", layout="wide")
 
 
 @st.cache_resource(show_spinner="Memuat model ...")
@@ -141,7 +141,7 @@ with tab1:
                             title="Jumlah Buku per Tahun Terbit"),
                     use_container_width=True)
 
-    st.subheader("🔥 Buku Paling Banyak Dibaca (statistik, bukan komponen model)")
+    st.subheader("🔥 Buku Paling Banyak Dibaca")
     ctry = ["(Semua negara)"] + sorted(art["country_pop"]["country"].unique())
     sel = st.selectbox("Filter negara", ctry)
     pop = recsys.popular_by_country(art, sel, 10)
@@ -193,7 +193,7 @@ with tab2:
 # TAB 3 : new user (cold-start)
 # =========================================================
 with tab3:
-    st.subheader("User Baru — pilih buku yang kamu suka")
+    st.subheader("User Baru - pilih buku yang kamu suka")
     st.caption("Cari judul/penulis, tambahkan ke daftar, beri rating, "
                "lalu dapatkan rekomendasi.")
     if "picks" not in st.session_state:
