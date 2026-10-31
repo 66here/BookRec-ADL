@@ -640,22 +640,21 @@ if page == "Overview":
                 “A landscape of books<br>waiting to be explored.”
             </h1>
             <p style="color:var(--text-dim);font-size:1.05rem;max-width:540px;line-height:1.7;margin:0;">
-                Bookscape blends collaborative filtering with content-based intelligence
-                to surface books you'll love — before you even know to look for them.
+                Discover books tailored to your taste and explore stories waiting to become your next favorite.
             </p>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("📚 Books in Model", f"{eda['model_items']:,}")
-    c2.metric("👥 Readers", f"{eda['model_users']:,}")
-    c3.metric("🔗 Interactions", f"{eda['model_inter']:,}")
-    c4.metric("⭐ Avg Rating", f"{AVG_ALL:.2f} / 10")
+    c1.metric("Books in Model", f"{eda['model_items']:,}")
+    c2.metric("Readers", f"{eda['model_users']:,}")
+    c3.metric("Interactions", f"{eda['model_inter']:,}")
+    c4.metric("Avg Rating", f"{AVG_ALL:.2f} / 10")
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""<h2 style="font-family:var(--font-head);font-size:1.6rem;margin-bottom:1.2rem;">
-        🔥 Top Rated Books in Dataset</h2>""", unsafe_allow_html=True)
+        Top Rated Books in Dataset</h2>""", unsafe_allow_html=True)
 
     pool = items[items["n_explicit"] >= 30]
     if len(pool) < 6:
@@ -847,10 +846,10 @@ elif page == "Book Matcher":
         else:
             u = users[users.user_id == uid].iloc[0]
             m1, m2, m3, m4 = st.columns(4)
-            m1.metric("🆔 Reader", int(uid))
-            m2.metric("🌍 Country", str(u["country"]).title())
-            m3.metric("🎂 Age", int(u["age"]) if pd.notna(u["age"]) else "n/a")
-            m4.metric("📚 Books read", int(u["n_inter"]))
+            m1.metric("Reader", int(uid))
+            m2.metric("Country", str(u["country"]).title())
+            m3.metric("Age", int(u["age"]) if pd.notna(u["age"]) else "n/a")
+            m4.metric("Books read", int(u["n_inter"]))
 
             hist = items.iloc[x.indices].copy()
             hist["w"] = x.data
