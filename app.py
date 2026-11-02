@@ -6,6 +6,7 @@ Hybrid recommender: Collaborative Filtering (SVD) + Content-Based (TF-IDF)
 Jalankan:  streamlit run app.py
 """
 import html
+import math
 import os
 
 import numpy as np
@@ -682,24 +683,30 @@ elif page == "Insights":
             {inner}
         </div>"""), unsafe_allow_html=True)
 
-    def hbars(series, title, color=ACCENT, highlight=None, fmt="{:,.0f}", label_w=150):
+    # palet chart selaras tema: indigo (tinta), terakota, amber (bintang rating)
+    BAR_INDIGO = "linear-gradient(180deg,#6B7BDD 0%,#3B4BB8 100%)"
+    BAR_TERRA = "linear-gradient(180deg,#EE8466 0%,#D9593D 100%)"
+    BAR_AMBER = "linear-gradient(180deg,#F4BE5A 0%,#D98E04 100%)"
+    H_INDIGO = "linear-gradient(90deg,#3B4BB8 0%,#6B7BDD 100%)"
+    H_TERRA = "linear-gradient(90deg,#D9593D 0%,#EE8466 100%)"
+
+    def hbars(series, title, color=H_INDIGO, label_w=150, fmt="{:,.0f}"):
         mx = float(max(series.values)) if len(series) else 1.0
         rows = ""
         for lab, val in series.items():
             w = 100 * float(val) / mx if mx > 0 else 0
-            c = color if highlight is None else (ACCENT2 if lab == highlight else "var(--bar-off)")
             rows += (f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">'
                      f'<div style="width:{label_w}px;text-align:right;color:var(--text);font-size:.8rem;'
                      f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{esc(lab)}">{esc(lab)}</div>'
-                     f'<div style="flex:1;background:var(--track);border-radius:6px;height:18px;overflow:hidden;">'
-                     f'<div style="width:{w:.1f}%;height:100%;background:{c};border-radius:6px;"></div></div>'
+                     f'<div style="flex:1;background:var(--track);border-radius:999px;height:16px;overflow:hidden;">'
+                     f'<div style="width:{w:.1f}%;height:100%;background:{color};border-radius:999px;"></div></div>'
                      f'<div style="width:72px;color:var(--text-dim);font-size:.78rem;">{fmt.format(float(val))}</div></div>')
         chart_card(title, rows)
 
     def compact(v):
         return f"{v / 1000:.1f}k" if v >= 1000 else f"{v:,.0f}"
 
-    def vbars(labels, values, title, highlight=None, height=200, note=""):
+    def vbars(labels, values, title, color=BAR_INDIGO, height=200):
         vals = [float(v) for v in values]
         mx = max(vals) if vals else 1.0
         show_val = len(labels) <= 14          # sedikit batang -> tampilkan angka di atas batang
@@ -708,41 +715,43 @@ elif page == "Insights":
         bars, labs = "", ""
         for i, (lab, v) in enumerate(zip(labels, vals)):
             hgt = 100 * v / mx if mx > 0 else 0
-            c = ACCENT2 if (highlight is not None and str(lab) in highlight) else ACCENT
             val_lbl = (f'<div style="position:absolute;left:0;right:0;bottom:calc({hgt:.1f}% + 3px);'
                        f'text-align:center;color:var(--text-dim);font-size:.68rem;font-weight:600;">'
                        f'{compact(v)}</div>') if show_val else ""
             bars += (f'<div title="{esc(lab)}: {v:,.0f}" style="flex:1;position:relative;">'
                      f'{val_lbl}<div style="position:absolute;left:0;right:0;bottom:0;height:{hgt:.1f}%;'
-                     f'min-height:1px;background:{c};border-radius:4px 4px 0 0;"></div></div>')
+                     f'min-height:1px;background:{color};border-radius:8px 8px 0 0;"></div></div>')
             txt = esc(lab) if i % step == 0 else ""
             labs += (f'<div style="flex:1;display:flex;justify-content:center;">'
                      f'<span style="color:var(--text-dim);font-size:.7rem;white-space:nowrap;">{txt}</span></div>')
         inner = (f'<div style="display:flex;align-items:stretch;gap:{gap}px;height:{height}px;padding-top:18px;'
                  f'box-sizing:border-box;border-bottom:1px solid var(--line);">{bars}</div>'
                  f'<div style="display:flex;gap:{gap}px;margin-top:4px;">{labs}</div>')
-        if note:
-            inner += f'<div style="color:var(--text-faint);font-size:.72rem;margin-top:.6rem;">{esc(note)}</div>'
         chart_card(title, inner)
 
-    def pie_chart(title, slices, note=""):
-        """slices: list of (label, value, color). Pie murni CSS (conic-gradient)."""
+    def pie_chart(title, slices):
+        """slices: list of (label, value, color). Pie murni CSS; persentase ditulis di dalam irisan."""
         total = float(sum(v for _, v, _ in slices)) or 1.0
-        acc, stops, legend = 0.0, [], ""
+        acc, stops, legend, pct_labels = 0.0, [], "", ""
         for lab, v, col in slices:
             p = 100 * v / total
             stops.append(f"{col} {acc:.2f}% {acc + p:.2f}%")
+            mid = math.radians((acc + p / 2) * 3.6)            # sudut tengah irisan
+            x, y = 50 + 29 * math.sin(mid), 50 - 29 * math.cos(mid)
+            if p >= 5:
+                pct_labels += (f'<div style="position:absolute;left:{x:.1f}%;top:{y:.1f}%;'
+                               f'transform:translate(-50%,-50%);color:#FFFFFF;font-weight:800;font-size:1.05rem;'
+                               f'text-shadow:0 1px 4px rgba(0,0,0,0.28);">{p:.1f}%</div>')
             acc += p
             legend += (f'<div style="display:flex;align-items:center;gap:10px;margin:10px 0;">'
                        f'<span style="width:14px;height:14px;border-radius:4px;background:{col};flex-shrink:0;"></span>'
                        f'<div><div style="color:var(--text);font-size:.9rem;font-weight:600;">{esc(lab)}</div>'
-                       f'<div style="color:var(--text-dim);font-size:.8rem;">{v:,.0f} interactions · {p:.1f}%</div></div></div>')
+                       f'<div style="color:var(--text-dim);font-size:.8rem;">{v:,.0f} interactions</div></div></div>')
         inner = (f'<div style="display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;">'
-                 f'<div style="width:170px;height:170px;border-radius:50%;flex-shrink:0;'
-                 f'background:conic-gradient({", ".join(stops)});box-shadow:0 0 0 3px #FFFFFF, 0 4px 14px rgba(31,36,51,0.12);"></div>'
+                 f'<div style="position:relative;width:200px;height:200px;border-radius:50%;flex-shrink:0;'
+                 f'background:conic-gradient({", ".join(stops)});'
+                 f'box-shadow:0 0 0 4px #FFFFFF, 0 6px 18px rgba(31,36,51,0.14);">{pct_labels}</div>'
                  f'<div>{legend}</div></div>')
-        if note:
-            inner += f'<div style="color:var(--text-faint);font-size:.72rem;margin-top:.8rem;">{esc(note)}</div>'
         chart_card(title, inner)
 
     def metrics_table(df, hit_col, ndcg_col):
@@ -785,41 +794,37 @@ elif page == "Insights":
         n_implicit = float(rd.get(0, 0))
         n_rated = float(rd[rd.index != 0].sum())
 
-        # 1) pie chart: rating 0 vs rating lainnya
+        # 1) pie chart: rating 0 vs rating lainnya (persentase di dalam pie)
         pie_chart("Implicit vs Explicit Ratings",
-                  [("Rating 0 (read, not rated)", n_implicit, ACCENT2),
-                   ("Rated 1–10", n_rated, ACCENT)],
-                  note="Rating 0 means the reader interacted with the book without rating it. "
-                       "It is kept as a positive signal in the model.")
+                  [("Rating 0 (read, not rated)", n_implicit, "#D9593D"),
+                   ("Rated 1–10", n_rated, "#3B4BB8")])
 
         # 2) distribusi rating tanpa 0
         rd_rated = rd[rd.index != 0]
         vbars([str(int(i)) for i in rd_rated.index], rd_rated.values, "Rating Distribution",
-              height=240, note="Only explicit ratings (1–10) are shown; rating 0 is covered by the pie chart above.")
+              color=BAR_AMBER, height=240)
 
         a_col, b_col = st.columns(2)
         with a_col:
             tc = pd.Series(eda["top_countries"]).sort_values(ascending=False)
-            hbars(tc, "Top Countries by Readers", color=ACCENT, label_w=120)
+            hbars(tc, "Top Countries by Readers", color=H_INDIGO, label_w=120)
         with b_col:
             ta = pd.Series(eda["top_authors"]).sort_values(ascending=False)
-            hbars(ta, "Most Read Authors", color=ACCENT2, label_w=150)
+            hbars(ta, "Most Read Authors", color=H_TERRA, label_w=150)
 
         # 3) usia -> rentang 10 tahun
         ah = pd.Series(eda["age_hist"]).sort_index()
         ah = ah[(ah.index >= 5) & (ah.index <= 99)]
         age_grp = ah.groupby((ah.index // 10) * 10).sum()
         age_labels = ["<10" if b == 0 else f"{int(b)}–{int(b) + 9}" for b in age_grp.index]
-        vbars(age_labels, age_grp.values, "Reader Age Distribution",
-              highlight={age_labels[int(np.argmax(age_grp.values))]}, height=220,
-              note="Grouped in 10-year age ranges.")
+        vbars(age_labels, age_grp.values, "Reader Age Distribution", color=BAR_INDIGO, height=220)
 
-        # 4) tahun terbit -> rentang 10 tahun (dekade)
+        # 4) tahun terbit -> rentang 10 tahun (dekade); >2005 dikeluarkan (salah input, data dikumpulkan 2004)
         yh = pd.Series(eda["year_hist"]).sort_index()
         yh = yh[(yh.index >= 1950) & (yh.index <= 2005)]
         yr_grp = yh.groupby((yh.index // 10) * 10).sum()
         vbars([f"{int(d)}s" for d in yr_grp.index], yr_grp.values, "Books by Publication Year",
-              height=240, note="Grouped in 10-year ranges (decades). Years after 2005 are left out as likely data-entry errors (the dataset was collected in 2004).")
+              color=BAR_TERRA, height=240)
 
     # ---------- Model Evaluation ----------
     with t_eval:
