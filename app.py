@@ -683,12 +683,14 @@ elif page == "Insights":
             {inner}
         </div>"""), unsafe_allow_html=True)
 
-    # palet chart selaras tema: indigo (tinta), terakota, amber (bintang rating)
-    BAR_INDIGO = "linear-gradient(180deg,#6B7BDD 0%,#3B4BB8 100%)"
-    BAR_TERRA = "linear-gradient(180deg,#EE8466 0%,#D9593D 100%)"
-    BAR_AMBER = "linear-gradient(180deg,#F4BE5A 0%,#D98E04 100%)"
-    H_INDIGO = "linear-gradient(90deg,#3B4BB8 0%,#6B7BDD 100%)"
-    H_TERRA = "linear-gradient(90deg,#D9593D 0%,#EE8466 100%)"
+    # Palet grafik Bookscape — mengikuti tema "Tinta & Kertas"
+    # Indigo = warna utama, terracotta = aksen, amber = rating.
+    # Nuansanya dibuat sedikit lebih lembut agar nyaman dilihat di latar krem.
+    BAR_INDIGO = "linear-gradient(180deg,#7885D2 0%,#3B4BB8 100%)"
+    BAR_TERRA = "linear-gradient(180deg,#E99A7F 0%,#C9654C 100%)"
+    BAR_AMBER = "linear-gradient(180deg,#F0C878 0%,#C58A22 100%)"
+    H_INDIGO = "linear-gradient(90deg,#3B4BB8 0%,#7885D2 100%)"
+    H_TERRA = "linear-gradient(90deg,#C9654C 0%,#E99A7F 100%)"
 
     def hbars(series, title, color=H_INDIGO, label_w=150, fmt="{:,.0f}"):
         mx = float(max(series.values)) if len(series) else 1.0
@@ -796,8 +798,8 @@ elif page == "Insights":
 
         # 1) pie chart: rating 0 vs rating lainnya (persentase di dalam pie)
         pie_chart("Implicit vs Explicit Ratings",
-                  [("Rating 0 (read, not rated)", n_implicit, "#D9593D"),
-                   ("Rated 1–10", n_rated, "#3B4BB8")])
+                  [("Rating 0 (read, not rated)", n_implicit, "#C9654C"),
+                   ("Rated 1–10", n_rated, "#5363BE")])
 
         # 2) distribusi rating tanpa 0
         rd_rated = rd[rd.index != 0]
